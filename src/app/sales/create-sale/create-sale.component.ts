@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, FormControl, FormArray } from '@angular/forms';
+import { FormBuilder, FormGroup, FormControl, FormArray, Validators } from '@angular/forms';
 import { Observable, BehaviorSubject } from 'rxjs';
-import { filter, map, count } from 'rxjs/operators';
-import { ActivatedRoute } from '@angular/router';
-import { SalesService } from '../shared/sales.service';
+import { filter, map, count, switchMap, distinctUntilChanged } from 'rxjs/operators';
+import { ActivatedRoute, Router } from '@angular/router';
+import { SaleService } from '../shared/sale.service';
 import { ToastrService } from 'ngx-toastr';
 import { SaleDetail } from '../shared/sale-detail.model';
+import { CoreValidators } from '../../core/forms/core-validators';
 
 @Component({
     selector: 'app-create-sale',
@@ -17,16 +18,15 @@ export class CreateSaleComponent implements OnInit {
     form: FormGroup;
     get detailFormArray(): FormArray { return this.form.get('details') as FormArray; }
     itemControl = new FormControl();
-    monthsControl = new FormControl();
 
     filteredCustomers: Observable<any[]>;
     filteredItems: Observable<any[]>;
     selectedCustomerRfc: Observable<string>;
-
+    changing = false;
     customers = [];
     items = [];
-
-    configuration: any = {};
+    code: number;
+    get formatedCode() { return this.code ? this.code.toString().padStart(4, '0') : ''; }
 
     downPayment: number;
     downPaymentBonus: number;
@@ -36,7 +36,8 @@ export class CreateSaleComponent implements OnInit {
 
     constructor(private formBuilder: FormBuilder,
         private route: ActivatedRoute,
-        private salesService: SalesService,
+        private salesService: SaleService,
+        private router: Router,
         private toastr: ToastrService,
     ) { }
 
@@ -53,6 +54,7 @@ export class CreateSaleComponent implements OnInit {
     ngOnInit() {
         this.buildForm();
         this.recoveryRouteData();
+
         this.selectedCustomerRfc = this.form.get('customerId').valueChanges
             .pipe(
                 map(v => this.customers.find(c => c.id === v)),
@@ -69,75 +71,69 @@ export class CreateSaleComponent implements OnInit {
                 filter((t: string) => t.length >= 3),
                 map(t => t ? this.filterItems(t) : this.customers.slice())
             );
-        let changing = false;
 
-        this.form.valueChanges.pipe(
-            filter(_ =>
-                this.detailFormArray.controls.length > 0 &&
-                this.detailFormArray.value.filter(d => d.quantity === null).length === 0
+        this.detailFormArray.valueChanges.pipe(
+            distinctUntilChanged(),
+            filter(value =>
+                value.length > 0 &&
+                value.filter(d => d.quantity === null).length === 0
             ),
-            filter(_ => !changing)
+            filter(_ => !this.changing)
         ).subscribe(value => {
-            console.log(value);
-            this.salesService.calculateSale(value).subscribe(res => {
+            this.salesService.calculateSale({ details: value }).subscribe(res => {
                 this.downPayment = res.downPayment;
                 this.downPaymentBonus = res.downPaymentBonus;
                 this.total = res.total;
                 this.monthlyPayments = res.monthlyPayments;
-                changing = true;
+                this.changing = true;
                 this.detailFormArray.patchValue(res.details);
-                changing = false;
+                this.changing = false;
             });
 
         });
 
-
-        /*    this.saleDetailsSubject.subscribe(
-               saleDetails => {
-                   const amount = saleDetails.map(d => d.amount).reduce((a, b) => a + b, 0);
-                   this.downPayment = this.saleCalculator.downPayment(amount, this.configuration.downPayment);
-                   this.downPaymentBonus = this.saleCalculator.downPaymentBonus(
-                       this.downPayment,
-                       this.configuration.financeRate,
-                       this.configuration.deadline);
-                   this.total = this.saleCalculator.total(amount, this.downPayment, this.downPaymentBonus);
-   
-               }
-           ); */
     }
 
-    next() {
-        const customerId = this.form.get('customerId').value;
-        const customer = this.customers.find(c => c.id === customerId);
-        const detailsWithZero = this.detailFormArray.value.filter(e => e.quantity <= 0).length;
 
-        if (!customer || detailsWithZero || this.detailFormArray.value.length === 0) {
-            this.toastr.warning('Los datos ingresados no son correctos, favor de verificar');
-        } else {
-            this.monthlyPaymentStep = true;
-        }
-
-
-    }
 
     buildForm() {
         this.form = this.formBuilder.group(
             {
-                customerId: [null],
-                details: this.formBuilder.array([])
+                customerId: [null, [
+                    Validators.required,
+                    CoreValidators.autocomplete(v => this.customers.find(c => c.id === v) != null)],
+                    null,
+                    {
+                        required: 'No es posible continuar, debe ingresar [name] es obligatorio.',
+                        autocomplete: 'Debe seleccionar un cliente válido'
+                    }
+                ],
+                details: this.formBuilder.array([], [CoreValidators.arrayNotEmpty]),
+                numberOfMonths: [null, [Validators.required], null,
+                    {
+                        required: 'Debe seleccionar un plazo para realizar el pago de su compra.'
+
+                    }]
             }
         );
+
+        this.form.get('numberOfMonths').disable();
+
     }
+    /* 
+        trackBy = (index: number) =>
+        {
+            return this.detailFormArray.get(index.toString()).get('itemId').value;
+    
+        } */
 
 
 
     addDetailForm(item) {
-
-
         const detailForm = this.formBuilder.group(
             {
                 itemId: [item.id],
-                quantity: [0],
+                quantity: [0, [Validators.min(1)]],
                 description: [item.description],
                 model: [item.model],
                 price: [0],
@@ -151,10 +147,23 @@ export class CreateSaleComponent implements OnInit {
         detailForm.get('amount').disable();
 
         this.detailFormArray.push(detailForm);
+
+        detailForm.get('quantity').valueChanges.pipe(
+            distinctUntilChanged(),
+            filter(_ => !this.changing),
+            filter(v => v !== null),
+            switchMap(quantity => this.salesService.checkStock(item.id).pipe(map(stock => ({ stock, quantity })))),
+            filter(r => r.stock < r.quantity)
+        ).subscribe(r => {
+            this.toastr.warning(`El artículo ${item.description} solo cuenta con ${r.stock} unidades.`);
+            this.changing = true;
+            detailForm.get('quantity').setValue(r.stock);
+            this.changing = false;
+        });
     }
 
     removeDetailForm = (index) =>
-        this.detailFormArray.removeAt(index);
+        this.detailFormArray.removeAt(index)
 
 
 
@@ -162,30 +171,23 @@ export class CreateSaleComponent implements OnInit {
         const itemId = this.itemControl.value;
         const item = this.items.find(i => i.id === itemId);
 
-        //const saleDetails = this.saleDetailsSubject.value;
         if (item) {
-            this.salesService.checkStock(item.id).subscribe(
-                hasStock => {
-                    if (hasStock) {
-                        const existingItem = this.detailFormArray.value.find(i => i.itemId === itemId);
-                        if (existingItem) {
-                            this.toastr.warning('Ya existe un detalle para este artículo');
+            this.salesService.checkStock(item.id)
+                .pipe(map(stock => stock > 0))
+                .subscribe(
+                    hasStock => {
+                        if (hasStock) {
+                            const existingItem = this.detailFormArray.value.find(i => i.itemId === itemId);
+                            if (existingItem) {
+                                this.toastr.warning('Ya existe un detalle para este artículo');
+                            } else {
+                                this.addDetailForm(item);
+                            }
                         } else {
-                            /*    const saleDetail = new SaleDetail(
-                                   item.id,
-                                   item.description,
-                                   item.model,
-                               );
-                               this.saleDetailsSubject.next([...saleDetails, saleDetail]);
-                               this.changeQuantity(saleDetail, 1); */
-                            this.addDetailForm(item);
-
+                            this.toastr.warning('El artículo seleccionado no cuenta con existencia, favor de verificar.');
                         }
-                    } else {
-                        this.toastr.warning('El artículo seleccionado no cuenta con existencia, favor de verificar.');
                     }
-                }
-            );
+                );
         } else {
             this.toastr.warning('Debe seleccionar un artículo primero');
         }
@@ -194,33 +196,36 @@ export class CreateSaleComponent implements OnInit {
 
 
 
-    trackByFn(item) {
-        return item.itemId;
+    next() {
+
+        if (this.form.valid) {
+            this.monthlyPaymentStep = true;
+            this.form.get('numberOfMonths').enable();
+        } else {
+            this.toastr.warning('Los datos ingresados no son correctos, favor de verificar');
+        }
     }
 
-    // TODO validar cantidad
-    changeQuantity(saleDetail: SaleDetail, quantity) {
-        // using inmutability pattern
-        /*   this.saleDetailsSubject.next(this.saleDetailsSubject.value.map(d => {
-              if (d === saleDetail) {
-                  const item = this.items.find(i => i.id === d.itemId);
-                  const price = this.saleCalculator.price(item.price, this.configuration.financeRate, this.configuration.deadline);
-                  const amount = this.saleCalculator.amount(price, quantity);
-                  return ({
-                      ...d, ...{
-                          quantity,
-                          price,
-                          amount
-                      }
-                  });
-              } else {
-                  return d;
-              }
-          })); */
+    save() {
 
+        if (this.form.valid) {
+            this.salesService.createSale(this.form.value).subscribe(
+                () => {
+                    this.toastr.success('Bien Hecho, Tu venta ha sido registrada correctamente');
+                    this.goBack();
+                },
+                () => this.toastr.error('Ocurrio un error al registrar tu venta')
+            );
+        } else {
+            if (!this.form.get('numberOfMonths').valid) {
+                this.toastr.warning('Debe seleccionar un plazo para realizar el pago de su compra.');
+            }
+        }
     }
 
-
+    goBack() {
+        this.router.navigate(['/sales']);
+    }
 
 
     displayCustomerWith = (id: string) => {
@@ -258,11 +263,9 @@ export class CreateSaleComponent implements OnInit {
     private recoveryRouteData() {
         this.route.data.subscribe(data => {
             Object.assign(this, data.dependencies);
+            this.code = data.nextCode;
         });
     }
 
-    private save() {
-
-    }
 
 }

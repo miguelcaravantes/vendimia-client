@@ -30,8 +30,7 @@ export class ItemDetailComponent implements OnInit {
   ) { }
 
 
-  // TODO validate number fields
-  // TODO get only the necesary fields on queries
+
   ngOnInit() {
     this.buildForm();
     this.recoveryRouteData();

@@ -1,10 +1,13 @@
 <div class="container">
-  <h3>Registro de Ventas</h3>
-
-  <form [formGroup]="form">
+  <div class="d-flex p-3">
+    <h3>Registro de Ventas</h3>
+    <span class="ml-auto">Clave: {{formatedCode}}</span>
+  </div>
+  <form [formGroup]="form" (submit)="save()">
     <div class="row">
       <mat-form-field class="col-sm-6">
-        <input matInput placeholder="Buscar cliente..." [matAutocomplete]="auto" formControlName="customerId">
+        <input matInput placeholder="Cliente" [matAutocomplete]="auto" formControlName="customerId">
+        <mat-error></mat-error>
         <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayCustomerWith">
           <mat-option *ngFor="let customer of filteredCustomers | async" [value]="customer.id">
             <span>{{ fullName(customer) }}</span>
@@ -15,9 +18,9 @@
         {{ selectedCustomerRfc | async }}
       </div>
     </div>
-    <div class="row">
+    <div class="row mt-2">
       <mat-form-field class="col-sm-6">
-        <input matInput placeholder="Buscar artículo..." [matAutocomplete]="auto2" [formControl]="itemControl">
+        <input matInput placeholder="Artículo" [matAutocomplete]="auto2" [formControl]="itemControl">
         <mat-autocomplete #auto2="matAutocomplete" [displayWith]="displayItemsWith">
           <mat-option *ngFor="let item of filteredItems | async" [value]="item.id">
             <span>{{ item.description }}</span>
@@ -32,7 +35,7 @@
     </div>
 
 
-    <table class="mat-table mat-elevation-z8 w-100">
+    <table class="mat-table mat-elevation-z8 w-100  mt-3">
       <thead>
         <tr class="mat-header-row">
           <th class="mat-header-cell"> Descripción </th>
@@ -77,13 +80,13 @@
       </div>
     </div>
     <div *ngIf="!monthlyPaymentStep" class="d-flex mt-5">
-      <button class="ml-auto" mat-button type="button">Cancelar</button>
+      <button class="ml-auto" mat-button type="button" (click)="goBack()">Cancelar</button>
       <button mat-raised-button type="button" color="primary" (click)="next()">Siguiente</button>
     </div>
 
     <div *ngIf="monthlyPaymentStep" class="mt-3">
 
-      <mat-radio-group [formControl]="monthsControl">
+      <mat-radio-group formControlName="numberOfMonths">
         <table class="mat-table mat-elevation-z8 w-100">
           <thead>
             <tr>
@@ -94,24 +97,26 @@
           </thead>
           <tbody>
             <tr class="mat-row" *ngFor="let mp of monthlyPayments">
-              <td class="mat-cell"> {{mp.numberOfmonths}} ABONOS DE </td>
+              <td class="mat-cell"> {{mp.numberOfMonths}} ABONOS DE </td>
               <td class="mat-cell"> {{mp.monthlyPayment}} </td>
               <td class="mat-cell"> TOTAL A PAGAR {{mp.total}} </td>
               <td class="mat-cell"> SE AHORRA {{mp.saving}}</td>
               <td class="mat-cell">
-                <mat-radio-button class="example-margin" [value]="mp.number"></mat-radio-button>
+                <mat-radio-button class="example-margin" [value]="mp.numberOfMonths"></mat-radio-button>
               </td>
             </tr>
           </tbody>
         </table>
+        <mat-error></mat-error>
       </mat-radio-group>
 
 
       <div class="d-flex mt-5">
-        <button class="ml-auto" mat-button type="button">Cancelar</button>
-        <button mat-raised-button type="button" color="primary">Guardar</button>
+        <button class="ml-auto" mat-button type="button" (click)="goBack()" >Cancelar</button>
+        <button mat-raised-button type="submit" color="primary">Guardar</button>
       </div>
     </div>
   </form>
 </div>
 
+ 

@@ -1,5 +1,4 @@
-import { AbstractControl, ValidatorFn, ValidationErrors, Validators } from '@angular/forms';
-import 'rxjs/add/operator/distinctUntilChanged';
+import { AbstractControl, ValidatorFn, ValidationErrors, Validators, FormArray } from '@angular/forms';
 
 function isEmptyInputValue(value: any): boolean {
     return value == null || value.length === 0;
@@ -53,6 +52,18 @@ export class CoreValidators {
                 return !compareControl || compareControl.value === control.value ? null : { 'equalTo': true };
             }
         };
+    }
+
+
+    static autocomplete(validator: (value: any) => boolean): ValidatorFn {
+        return (control: AbstractControl): ValidationErrors | null => {
+            const result = validator(control.value);
+            return result ? null : { 'autocomplete': true };
+        };
+    }
+
+    static arrayNotEmpty(control: FormArray): ValidationErrors | null {
+        return (control.controls.length > 0) ? null : { 'arrayNotEmpty': true };
     }
 
 

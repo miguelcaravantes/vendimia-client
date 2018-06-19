@@ -7,10 +7,34 @@ import { map } from 'rxjs/operators';
 @Injectable({
     providedIn: 'root'
 })
-export class SalesService {
+export class SaleService {
 
     constructor(private apollo: Apollo) {
     }
+
+    getList(): Observable<any[]> {
+        const query = gql`{
+            sales{
+                id
+                code
+                customer {
+                    code,
+                    code
+                    firstName
+                    lastName
+                    mothersLastName
+                }
+                total
+                creationDate
+            }
+        }`;
+        return this.apollo.query<any>(
+            {
+                query
+            }
+        ).pipe(map(({ data }) => data.sales));
+    }
+
 
     getCreateDependencies(): Observable<any[]> {
         const query = gql`
@@ -30,11 +54,6 @@ export class SalesService {
                 model
                 price
                 stock
-          },
-          configuration {
-            financeRate
-            downPayment
-            deadline
           }
      }
     `;
@@ -43,7 +62,7 @@ export class SalesService {
         }).pipe(map(({ data }) => data));
     }
 
-    checkStock(id: string): Observable<boolean> {
+    checkStock(id: string): Observable<number> {
         const query = gql`
             query checkStock($id: ID!) {
                 item(id: $id) {
@@ -57,16 +76,15 @@ export class SalesService {
             {
                 id
             }
-        }).pipe(map(({ data }) => data.item.stock > 0));
+        }).pipe(map(({ data }) => data.item.stock));
     }
 
     calculateSale(sale: any): Observable<any> {
         const query = gql`
-            query calculateSale($input: SaleInput!) {
+            query calculateSale($input: PreSaleInput!) {
                 calculateSale(sale: $input) {
                     details {
                         itemId
-                        quantity
                         price
                         amount
                     }
@@ -75,7 +93,7 @@ export class SalesService {
                     total
                     monthlyPayments
                     {
-                        numberOfmonths
+                        numberOfMonths
                         monthlyPayment
                         total
                         saving
@@ -92,8 +110,31 @@ export class SalesService {
         }).pipe(map(({ data }) => data.calculateSale));
     }
 
+    createSale(sale: any) {
+        const mutation = gql`
+        mutation createSale($input: SaleInput!) {
+            createSale(sale: $input)
+        }
+        `;
+        return this.apollo.mutate<any>({
+            mutation,
+            variables:
+            {
+                input: sale
+            }
+        }).pipe(map(({ data }) => data.calculateSale));
+    }
 
-
+    nextCode(): Observable<object> {
+        const query = gql`
+            query {
+                saleNextCode
+            }
+            `;
+        return this.apollo.query<any>({
+            query,
+        }).pipe(map(({ data }) => data.saleNextCode));
+    }
 
 
 }
