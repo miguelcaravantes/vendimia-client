@@ -60,4 +60,40 @@ export class SalesService {
         }).pipe(map(({ data }) => data.item.stock > 0));
     }
 
+    calculateSale(sale: any): Observable<any> {
+        const query = gql`
+            query calculateSale($input: SaleInput!) {
+                calculateSale(sale: $input) {
+                    details {
+                        itemId
+                        quantity
+                        price
+                        amount
+                    }
+                    downPayment
+                    downPaymentBonus
+                    total
+                    monthlyPayments
+                    {
+                        numberOfmonths
+                        monthlyPayment
+                        total
+                        saving
+                    }
+                }
+            }
+            `;
+        return this.apollo.query<any>({
+            query,
+            variables:
+            {
+                input: sale
+            }
+        }).pipe(map(({ data }) => data.calculateSale));
+    }
+
+
+
+
+
 }
