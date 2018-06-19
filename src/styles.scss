@@ -1,7 +1,9 @@
-
-@import "~@angular/material/prebuilt-themes/indigo-pink.css";
 @import "~bootstrap/scss/bootstrap";
 @import "~ngx-toastr/toastr";
+
+@import '~@angular/material/theming';
+@import "./theme";
+@include angular-material-theme($app-theme);
 // @import "~ngx-toastr/toastr-bs4-alert"; use it if you want to use bootstrap styles in your toastr
 
 body {
@@ -12,3 +14,4 @@ a, button
 {
   outline: none !important;
 }
+

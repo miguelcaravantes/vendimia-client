@@ -1,0 +1,115 @@
+<div class="container">
+  <h3>Registro de Ventas</h3>
+
+  <form [formGroup]="form">
+    <div class="row">
+      <mat-form-field class="col-sm-6">
+        <input matInput placeholder="Buscar cliente..." [matAutocomplete]="auto" formControlName="customerId">
+        <mat-autocomplete #auto="matAutocomplete" [displayWith]="displayCustomerWith">
+          <mat-option *ngFor="let customer of filteredCustomers | async" [value]="customer.id">
+            <span>{{ fullName(customer) }}</span>
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+      <div class="col pt-3">
+        {{ selectedCustomerRfc | async }}
+      </div>
+    </div>
+    <div class="row">
+      <mat-form-field class="col-sm-6">
+        <input matInput placeholder="Buscar artículo..." [matAutocomplete]="auto2" [formControl]="itemControl">
+        <mat-autocomplete #auto2="matAutocomplete" [displayWith]="displayItemsWith">
+          <mat-option *ngFor="let item of filteredItems | async" [value]="item.id">
+            <span>{{ item.description }}</span>
+          </mat-option>
+        </mat-autocomplete>
+      </mat-form-field>
+      <div>
+        <button mat-icon-button (click)="addItem()">
+          <mat-icon matTooltip="Añadir artículo">add</mat-icon>
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <table class="mat-table mat-elevation-z8 w-100">
+    <thead>
+      <tr class="mat-header-row">
+        <th class="mat-header-cell"> Descripción </th>
+        <th class="mat-header-cell"> Modelo </th>
+        <th class="mat-header-cell"> Cantidad </th>
+        <th class="mat-header-cell"> Precio </th>
+        <th class="mat-header-cell"> Importe </th>
+        <th class="mat-header-cell"> </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="mat-row" *ngFor="let item of saleDetailsSubject | async; trackBy: trackByFn">
+        <td class="mat-cell"> {{item.description}} </td>
+        <td class="mat-cell"> {{item.model}} </td>
+        <td class="mat-cell">
+          <mat-form-field>
+            <input matInput type="number" [value]="item.quantity" (input)="changeQuantity(item, $event.target.value)">
+          </mat-form-field>
+        </td>
+        <td class="mat-cell"> {{item.price}} </td>
+        <td class="mat-cell"> {{item.amount}} </td>
+        <td class="mat-cell">
+          <button mat-icon-button color="warn" (click)="removeDetail(item)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="mt-3">
+    <div class="row">
+      <div class="offset-md-7 col-6 col-md-3">Enganche:</div>
+      <div class="col-6 col-md-2">{{downPayment}}</div>
+    </div>
+    <div class="row">
+      <div class="offset-md-7 col-6 col-md-3">Bonificacion Enganche:</div>
+      <div class="col-6 col-md-2">{{downPaymentBonus}}</div>
+    </div>
+    <div class="row">
+      <div class="offset-md-7 col-6 col-md-3">Total:</div>
+      <div class="col-6 col-md-2">{{total}}</div>
+    </div>
+  </div>
+  <div *ngIf="!monthlyPaymentStep" class="d-flex mt-5">
+    <button class="ml-auto" mat-button type="button">Cancelar</button>
+    <button mat-raised-button type="button" color="primary" (click)="next()">Siguiente</button>
+  </div>
+
+  <div *ngIf="monthlyPaymentStep" class="mt-3">
+
+    <mat-radio-group [formControl]="monthsControl">
+      <table class="mat-table mat-elevation-z8 w-100">
+        <thead>
+         <tr>
+           <td colspan="5">
+              <h4 class="text-center p-2">ABONOS MENSUALES</h4>
+           </td>
+         </tr>
+        </thead>
+        <tbody>
+          <tr class="mat-row" *ngFor="let mp of monthlyPayments">
+            <td class="mat-cell"> {{mp.number}} ABONO DE </td>
+            <td class="mat-cell"> {{mp.payment}} </td>
+            <td class="mat-cell"> TOTAL A PAGAR {{mp.total}} </td>
+            <td class="mat-cell"> SE AHORRA {{mp.saving}}</td>
+            <td class="mat-cell">
+              <mat-radio-button class="example-margin" [value]="mp.number"></mat-radio-button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </mat-radio-group>
+
+    
+    <div class="d-flex mt-5">
+        <button class="ml-auto" mat-button type="button">Cancelar</button>
+        <button mat-raised-button type="button" color="primary">Guardar</button>
+      </div>
+  </div>
+</div>

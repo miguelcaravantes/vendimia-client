@@ -9,6 +9,7 @@ import { TemplateModule } from './template/template.module';
 import { CoreModule } from './core/core.module';
 import { ItemsModule } from './items/items.module';
 import { ConfigurationModule } from './configuration/configuration.module';
+import { SalesModule } from './sales/sales.module';
 
 @NgModule({
   declarations: [
@@ -22,6 +23,7 @@ import { ConfigurationModule } from './configuration/configuration.module';
     CustomersModule,
     ItemsModule,
     ConfigurationModule,
+    SalesModule,
     CoreModule,
 
   ],

@@ -13,7 +13,9 @@ import {
   MatDialogModule,
   MatMenuModule,
   MatTooltipModule,
-  MatFormFieldModule
+  MatFormFieldModule,
+  MatAutocompleteModule,
+  MatRadioModule
 } from '@angular/material';
 
 @NgModule({
@@ -32,6 +34,8 @@ import {
     MatMenuModule,
     MatTooltipModule,
     MatFormFieldModule,
+    MatAutocompleteModule,
+    MatRadioModule,
   ],
   exports:
     [
@@ -49,6 +53,9 @@ import {
       MatMenuModule,
       MatTooltipModule,
       MatFormFieldModule,
+      MatAutocompleteModule,
+    MatRadioModule,
+
 
     ],
   declarations: []

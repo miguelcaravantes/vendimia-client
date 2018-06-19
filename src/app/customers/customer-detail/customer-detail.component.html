@@ -4,8 +4,6 @@
         <span  *ngIf="type == detailTypes.Create" class="ml-auto">Clave: {{formatedCode}}</span>
       </div>
   <form [formGroup]="form" (submit)="onSubmit()">
-
-
     <mat-form-field appField class="col-md-4">
       <input matInput formControlName="firstName" placeholder="Nombre">
       <mat-error></mat-error>

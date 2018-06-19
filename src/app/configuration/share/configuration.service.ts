@@ -15,9 +15,9 @@ export class ConfigurationService {
     const query = gql`
         query {
             configuration {
-            financeRate
-            downPayment
-            deadline
+                financeRate
+                downPayment
+                deadline
             }
         }
         `;
